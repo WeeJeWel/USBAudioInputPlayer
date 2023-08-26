@@ -28,7 +28,6 @@ public class MainActivity extends FragmentActivity {
     private UsbManager usbManager;
     private static final String ACTION_USB_PERMISSION = "com.example.app.USB_PERMISSION";
 
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
