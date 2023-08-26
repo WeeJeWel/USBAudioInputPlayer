@@ -1,4 +1,3 @@
 <resources>
-
     <style name="Theme.USBAudioInputPlayer" parent="@style/Theme.Leanback" />
 </resources>

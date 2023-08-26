@@ -15,6 +15,9 @@ import androidx.fragment.app.FragmentActivity;
 
 import java.util.HashMap;
 
+// TODO:
+// Add visuals — https://github.com/bogerchan/Nier-Visualizer
+
 /*
  * Main Activity class that loads {@link MainFragment}.
  */
@@ -30,11 +33,6 @@ public class MainActivity extends FragmentActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-//        if (savedInstanceState == null) {
-//            getSupportFragmentManager().beginTransaction()
-//                    .replace(R.id.main_browse_fragment, new MainFragment())
-//                    .commitNow();
-//        }
 
         usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
@@ -124,4 +122,16 @@ public class MainActivity extends FragmentActivity {
             }
         }).start();
     }
+
+//    @Override
+//    public void onBackPressed() {
+//        FragmentManager fragmentManager = getSupportFragmentManager();
+//        if (fragmentManager.getBackStackEntryCount() > 0) {
+//            // If there are other fragments on the back stack, pop it
+//            fragmentManager.popBackStack();
+//        } else {
+//            // If no fragments are on the back stack, finish the activity
+//            finish();
+//        }
+//    }
 }
