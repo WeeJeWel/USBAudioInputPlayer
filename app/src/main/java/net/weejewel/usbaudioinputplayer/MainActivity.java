@@ -16,6 +16,7 @@ import androidx.fragment.app.FragmentActivity;
 
 // TODO:
 // Add visuals — https://github.com/bogerchan/Nier-Visualizer
+// Add Shazam SDK — Very fun to show recognized Album Art on the TV.
 
 /*
  * Main Activity class that loads {@link MainFragment}.
