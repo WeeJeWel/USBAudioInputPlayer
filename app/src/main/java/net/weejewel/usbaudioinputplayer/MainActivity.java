@@ -1,19 +1,18 @@
 package net.weejewel.usbaudioinputplayer;
 
 import android.Manifest;
-import android.app.*;
-import android.content.*;
 import android.content.pm.PackageManager;
-import android.hardware.usb.*;
 import android.media.*;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
-
-import java.util.HashMap;
 
 // TODO:
 // Add visuals — https://github.com/bogerchan/Nier-Visualizer
@@ -25,76 +24,96 @@ public class MainActivity extends FragmentActivity {
 
     private AudioRecord audioRecord;
     private AudioTrack audioTrack;
-    private UsbManager usbManager;
-    private static final String ACTION_USB_PERMISSION = "com.example.app.USB_PERMISSION";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        this.checkForAudioPermission();
+    }
 
-        // Register Broadcast Receiver for USB permission and connection
-        BroadcastReceiver usbReceiver = new BroadcastReceiver() {
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                if (ACTION_USB_PERMISSION.equals(action)) {
-                    // Handle permission result
-                } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-                    // USB device attached, try to initialize audio
-                } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-                    // USB device detached, release resources
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_BACK: {
+                audioTrack.stop();
+                Toast
+                    .makeText(this, "Stopped Playback", Toast.LENGTH_SHORT)
+                    .show();
+
+                finish();
+                return true;
+            }
+            case KeyEvent.KEYCODE_MEDIA_PLAY: {
+                if(audioTrack.getPlayState() == AudioTrack.PLAYSTATE_PAUSED) {
+                    audioTrack.play();
+                    Toast
+                        .makeText(this, "Resumed Playback", Toast.LENGTH_LONG)
+                        .show();
                 }
+                return true;
             }
-        };
+            case KeyEvent.KEYCODE_MEDIA_PAUSE: {
+                if(audioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
+                    audioTrack.pause();
+                    Toast
+                        .makeText(this, "Paused Playback", Toast.LENGTH_LONG)
+                        .show();
+                }
+                return true;
+            }
+        }
+        return false;
+    }
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_USB_PERMISSION);
-        registerReceiver(usbReceiver, filter);
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        Log.v("USB", "Checking devices...");
-        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-        UsbDevice usbDevice = null;
+        switch (requestCode) {
+            case 200: // Audio Permission
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.v("Audio", "Got Audio permission.");
+                    MainActivity.this.startListening();
+                } else {
+                    Log.v("Audio", "Denied Audio permission.");
 
-        // Iterate through connected devices and find your USB audio device
-        for (UsbDevice device : deviceList.values()) {
-            String deviceName = device.getProductName();
-            Log.v("USB", "Device Name:" + deviceName);
+                    Toast
+                            .makeText(this, "You must allow the Recording permission!", Toast.LENGTH_LONG)
+                            .show();
 
-            if (deviceName.contains("USB PnP Audio Device")) {
-                usbDevice = device;
+                    finish();
+                }
                 break;
-            }
         }
+    }
 
-        if (usbDevice == null) {
-            return;
-        }
 
-        // Request permission
-        Log.v("USB", "Checking usb permission...");
-        if (!usbManager.hasPermission(usbDevice)) {
-            Log.v("USB", "Asking usb permission...");
-            PendingIntent pi = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
-            usbManager.requestPermission(usbDevice, pi);
+    public void checkForAudioPermission() {
+        Log.v("Audio", "Checking for Audio permission...");
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            Log.v("Audio", "Already got Audio permission.");
+            this.startListening();
+        } else {
+            Log.v("Audio", "Asking for Audio permission...");
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 200);
         }
-        Log.v("USB", "Got usb permission.");
+    }
+
+    public void startListening() {
+        Log.v("Audio", "Starting listening...");
 
         int sampleRate = 44100;
         int channelConfig = AudioFormat.CHANNEL_IN_STEREO;
         int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
         int minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat);
 
-        Log.v("Audio", "Checking audio permission...");
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Log.v("Audio", "Asking audio permission...");
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},200);
+        Log.v("Audio", "Creating audio recording...");
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Log.v("Audio", "Missing Audio permission.");
             return;
         }
-        Log.v("Audio", "Got audio permission.");
-
-        Log.v("Audio", "Creating audio recording...");
         audioRecord = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, sampleRate, channelConfig, audioFormat, minBufferSize);
 
         Log.v("Audio", "Starting audio recording...");
@@ -113,6 +132,10 @@ public class MainActivity extends FragmentActivity {
         audioTrack.play();
 
         Log.v("Audio", "Streaming audio recording to audio track...");
+        Toast
+            .makeText(this, "Now playing audio from " + audioRecord.getRoutedDevice().getProductName() + " to TV", Toast.LENGTH_LONG)
+            .show();
+
         new Thread(() -> {
             byte[] audioData = new byte[minBufferSize];
             while (true) {
@@ -121,16 +144,4 @@ public class MainActivity extends FragmentActivity {
             }
         }).start();
     }
-
-//    @Override
-//    public void onBackPressed() {
-//        FragmentManager fragmentManager = getSupportFragmentManager();
-//        if (fragmentManager.getBackStackEntryCount() > 0) {
-//            // If there are other fragments on the back stack, pop it
-//            fragmentManager.popBackStack();
-//        } else {
-//            // If no fragments are on the back stack, finish the activity
-//            finish();
-//        }
-//    }
 }
